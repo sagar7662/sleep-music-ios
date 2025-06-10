@@ -11,9 +11,22 @@ import AVFoundation
 actor AudioPlayerActor {
     private var player: AVAudioPlayer?
 
+    func configureAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Audio session configuration failed: \(error)")
+        }
+    }
+
     func loadAudio(from url: URL) async throws -> TimeInterval {
+        if AVAudioSession.sharedInstance().category != .playback {
+            configureAudioSession()
+        }
         let data = try Data(contentsOf: url)
         player = try AVAudioPlayer(data: data)
+        player?.prepareToPlay()
         return player?.duration ?? 0
     }
 

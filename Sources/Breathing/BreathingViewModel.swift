@@ -103,15 +103,30 @@ public class BreathingViewModel: ObservableObject {
     }
     
     private func playBackgroundMusic() {
-        guard let url = Bundle.module.url(forResource: "background", withExtension: "mp3") else { return }
+        if AVAudioSession.sharedInstance().category != .playback {
+            configureAudioSession()
+        }
+        guard let url = Bundle.main.url(forResource: "background", withExtension: "mp3") else { return }
         backgroundPlayer = try? AVAudioPlayer(contentsOf: url)
         backgroundPlayer?.numberOfLoops = -1
         backgroundPlayer?.play()
     }
     
     private func playPhaseAudio(for phase: BreathingPhase) {
-        guard let url = Bundle.module.url(forResource: phase.audioFileName, withExtension: "mp3") else { return }
+        if AVAudioSession.sharedInstance().category != .playback {
+            configureAudioSession()
+        }
+        guard let url = Bundle.main.url(forResource: phase.audioFileName, withExtension: "mp3") else { return }
         phasePlayer = try? AVAudioPlayer(contentsOf: url)
         phasePlayer?.play()
+    }
+    
+    func configureAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("Audio session configuration failed: \(error)")
+        }
     }
 }
