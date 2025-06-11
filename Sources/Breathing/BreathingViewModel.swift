@@ -106,7 +106,7 @@ public class BreathingViewModel: ObservableObject {
         if AVAudioSession.sharedInstance().category != .playback {
             configureAudioSession()
         }
-        guard let url = Bundle.main.url(forResource: "background", withExtension: "mp3") else { return }
+        guard let url = Bundle.module.url(forResource: "background", withExtension: "mp3") else { return }
         backgroundPlayer = try? AVAudioPlayer(contentsOf: url)
         backgroundPlayer?.numberOfLoops = -1
         backgroundPlayer?.play()
@@ -116,7 +116,7 @@ public class BreathingViewModel: ObservableObject {
         if AVAudioSession.sharedInstance().category != .playback {
             configureAudioSession()
         }
-        guard let url = Bundle.main.url(forResource: phase.audioFileName, withExtension: "mp3") else { return }
+        guard let url = Bundle.module.url(forResource: phase.audioFileName, withExtension: "mp3") else { return }
         phasePlayer = try? AVAudioPlayer(contentsOf: url)
         phasePlayer?.play()
     }

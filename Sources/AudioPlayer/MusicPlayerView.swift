@@ -3,13 +3,13 @@ import SDWebImageSwiftUI
 
 public struct MusicPlayerView: View {
     @StateObject private var viewModel = MusicPlayerViewModel()
-
+    
     let title: String
     let subtitle: String
     let imageUrl: URL?
     let audioUrl: URL?
     let onDismiss: (() -> Void)?
-
+    
     public init(title: String, subtitle: String, imageUrl: URL?, audioUrl: URL?, onDismiss: (() -> Void)? = nil) {
         self.title = title
         self.subtitle = subtitle
@@ -17,9 +17,11 @@ public struct MusicPlayerView: View {
         self.audioUrl = audioUrl
         self.onDismiss = onDismiss
     }
-
+    
     @State private var safeAreaTop: CGFloat = 0
-
+    @State private var showDurationSheet = false
+    @State private var selectedDuration: TimeInterval = 0
+    
     public var body: some View {
         ZStack {
             // Background image fills whole screen
@@ -31,7 +33,7 @@ public struct MusicPlayerView: View {
                 .clipped()
                 .ignoresSafeArea()
                 .overlay(Color.black.opacity(0.3))
-
+            
             VStack(spacing: 16) {
                 // Top header with manual safe area padding
                 ZStack {
@@ -44,23 +46,38 @@ public struct MusicPlayerView: View {
                         }
                         Spacer()
                     }
-
+                    
                     Text(title)
                         .font(.headline)
                         .foregroundColor(.white)
                 }
                 .padding(.top, safeAreaTop)
                 .padding(.leading, 8)
-
+                
                 Spacer()
-
+                
                 // Player content
                 VStack(spacing: 16) {
                     Text(subtitle)
                         .font(.title2)
                         .bold()
                         .foregroundColor(.white)
-
+                    
+                    Button(action: {
+                        showDurationSheet = true
+                    }) {
+                        HStack {
+                            Image(systemName: "clock")
+                                .foregroundColor(.white)
+                            Text("Set duration: \(formatTime(selectedDuration == 0 ? viewModel.duration : selectedDuration))")
+                                .foregroundColor(.white)
+                                .font(.subheadline)
+                        }
+                        .padding(8)
+                        .background(Color.black.opacity(0.4))
+                        .cornerRadius(10)
+                    }
+                    
                     Slider(value: $viewModel.currentTime,
                            in: 0...(viewModel.duration > 0 ? viewModel.duration : 1),
                            onEditingChanged: { editing in
@@ -69,7 +86,7 @@ public struct MusicPlayerView: View {
                         }
                     })
                     .accentColor(.white)
-
+                    
                     HStack {
                         Text(formatTime(viewModel.currentTime))
                         Spacer()
@@ -77,7 +94,7 @@ public struct MusicPlayerView: View {
                     }
                     .foregroundColor(.white)
                     .font(.caption)
-
+                    
                     HStack(spacing: 40) {
                         Button {
                             viewModel.seek(to: max(viewModel.currentTime - 10, 0))
@@ -86,7 +103,7 @@ public struct MusicPlayerView: View {
                                 .foregroundColor(.white)
                                 .font(.title2)
                         }
-
+                        
                         Button {
                             viewModel.playPause()
                         } label: {
@@ -94,7 +111,7 @@ public struct MusicPlayerView: View {
                                 .foregroundColor(.white)
                                 .font(.system(size: 50))
                         }
-
+                        
                         Button {
                             viewModel.seek(to: min(viewModel.currentTime + 10, viewModel.duration))
                         } label: {
@@ -126,8 +143,32 @@ public struct MusicPlayerView: View {
         .onDisappear {
             viewModel.stop()
         }
+        .sheet(isPresented: $showDurationSheet, onDismiss: {
+            // Sync the selected duration with the playback limit
+            if selectedDuration > 0 {
+                viewModel.playbackLimit = selectedDuration
+            } else {
+                viewModel.playbackLimit = nil
+            }
+        }) {
+            if #available(iOS 16.0, *) {
+                DurationPickerSheet(
+                    isPresented: $showDurationSheet,
+                    selectedDuration: $selectedDuration,
+                    durations: [120, 300, 600, 900, 1200, 1800, 3600]
+                )
+                .presentationDetents([.height(200)])
+            } else {
+                // Fallback for iOS 15
+                DurationPickerSheet(
+                    isPresented: $showDurationSheet,
+                    selectedDuration: $selectedDuration,
+                    durations: [120, 300, 600, 900, 1200, 1800, 3600]
+                )
+            }
+        }
     }
-
+    
     private func formatTime(_ time: TimeInterval) -> String {
         let minutes = Int(time) / 60
         let seconds = Int(time) % 60

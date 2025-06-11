@@ -45,4 +45,8 @@ actor AudioPlayerActor {
     func currentTime() -> TimeInterval {
         return player?.currentTime ?? 0
     }
+    
+    func isPlaying() -> Bool {
+        return player?.isPlaying ?? false
+    }
 }
