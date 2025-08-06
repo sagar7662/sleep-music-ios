@@ -15,18 +15,33 @@ public class BreathingViewModel: ObservableObject {
     @Published public var scale: CGFloat = 1.0
     @Published public var countdown: Int = 3
     @Published public var isPaused = false
-    
+    @Published public var playbackLimit: TimeInterval?
+
     private let timerManager: BreathingTimerManager
     private var timer: Timer?
     
     private var backgroundPlayer: AVAudioPlayer?
     private var phasePlayer: AVAudioPlayer?
-    
+    private var breathingStartTime: Date?
+
     public init(steps: [BreathingStep]) {
         self.timerManager = BreathingTimerManager(steps: steps)
     }
     
+    public func togglePlayPause() {
+        isPaused.toggle()
+
+        if isPaused {
+            backgroundPlayer?.pause()
+            phasePlayer?.pause()
+        } else {
+            backgroundPlayer?.play()
+            phasePlayer?.play()
+        }
+    }
+    
     public func startCountdown() {
+        isPaused = false
         countdown = 3
         Task { @MainActor in
             while countdown > 0 {
@@ -37,8 +52,8 @@ public class BreathingViewModel: ObservableObject {
         }
     }
 
-    
     private func startBreathing() async {
+        breathingStartTime = Date()  // start timer
         await timerManager.start()
         await updateStateFromManager()
         playBackgroundMusic()
@@ -63,10 +78,20 @@ public class BreathingViewModel: ObservableObject {
     
     private func timerTick() async {
         guard !isPaused else { return }
-        
+
         await timerManager.decrementTimer()
         await updateStateFromManager()
-        
+
+        // Check if total playback limit is reached
+        if let limit = playbackLimit,
+           let start = breathingStartTime,
+           Date().timeIntervalSince(start) >= limit {
+            await MainActor.run {
+                self.reset()
+            }
+            return
+        }
+
         let isZero = await timerManager.isTimerZero()
         if isZero {
             await timerManager.advanceStep()
@@ -88,9 +113,9 @@ public class BreathingViewModel: ObservableObject {
             case .inhale:
                 self.scale = 1.5
             case .hold:
-                self.scale = 1.0
+                break
             case .exhale:
-                self.scale = 0.7
+                self.scale = 0.8
             }
         }
     }
@@ -128,5 +153,15 @@ public class BreathingViewModel: ObservableObject {
         } catch {
             print("Audio session configuration failed: \(error)")
         }
+    }
+    
+    public func reset() {
+        stop()
+        timerValue = 0
+        currentStepIndex = 0
+        scale = 1.0
+        countdown = 3
+        isPaused = true
+        breathingStartTime = nil
     }
 }
